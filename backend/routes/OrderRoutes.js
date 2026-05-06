@@ -1,90 +1,86 @@
 const express = require("express");
+const router = express.Router();
 const Bag = require("../models/Bag");
 const Order = require("../models/Order");
-const router = express.Router();
+const Transaction = require("../models/Transaction");
 
-function generateRandomTracking() {
-  const carriers = ["Delhivery", "Bluedart", "Ecom Express", "XpressBees"];
-  const statusOptions = ["Shipped", "Out for Delivery", "Delivered", "In Transit"];
-  const locations = ["Mumbai", "Delhi", "Bangalore", "Hyderabad", "Pune"];
-
-  const randomCarrier = carriers[Math.floor(Math.random() * carriers.length)];
-  const randomStatus = statusOptions[Math.floor(Math.random() * statusOptions.length)];
-  const randomLocation = locations[Math.floor(Math.random() * locations.length)];
-
-  return {
-    number: "TRK" + Math.floor(Math.random() * 10000000),
-    carrier: randomCarrier,
-    estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-    currentLocation: randomLocation,
-    status: randomStatus,
-    timeline: [
-      {
-        status: "Order placed",
-        location: "Warehouse",
-        timestamp: new Date().toISOString(),
-      },
-      {
-        status: randomStatus,
-        location: randomLocation,
-        timestamp: new Date().toISOString(),
-      },
-    ],
-  };
-}
-
+// 1. CREATE ORDER ROUTE
 router.post("/create/:userId", async (req, res) => {
   try {
-    const userId = req.params.userId;
-    const bag = await Bag.find({ userId }).populate("productId");
+    const { userId } = req.params;
+    const { shippingAddress, paymentMethod } = req.body;
 
-    if (bag.length === 0) {
-      return res.status(400).json({ message: "No items in the bag" });
+    // Validate inputs
+    if (!shippingAddress || !paymentMethod) {
+      return res.status(400).json({ message: "Shipping address and payment method are required" });
+    }
+    // Inside router.post("/create/:userId", ...)
+await Transaction.create({
+  user: userId,
+  amount: total,
+  type: "Payment",
+  paymentMethod: paymentMethod, // Now capturing the mode used in checkout
+  status: "Success"
+});
+
+    // 1. Fetch bag & check if empty
+    const bagItems = await Bag.find({ userId }).populate("productId");
+    if (!bagItems || bagItems.length === 0) {
+      return res.status(400).json({ message: "Bag is empty" });
     }
 
-    const orderItems = bag.map((item) => ({
-      productId: item.productId._id,
-      size: item.size,
-      price: item.productId.price,
-      quantity: item.quantity,
-    }));
+    // 2. Calculate totals
+    const total = bagItems.reduce((acc, item) => acc + (item.productId.price * item.quantity), 0);
 
-    // Fixed: was `price + quantity` (wrong), now `price * quantity` (correct)
-    const total = orderItems.reduce(
-      (sum, item) => sum + item.price * item.quantity,
-      0
-    );
-
+    // 3. Create Order
     const newOrder = new Order({
       userId,
-      date: new Date().toISOString(),
-      status: "Processing",
-      items: orderItems,   // Fixed: was `item`, schema expects `items`
+      items: bagItems.map(item => ({ 
+        productId: item.productId._id, 
+        price: item.productId.price, 
+        quantity: item.quantity 
+      })),
       total,
-      shippingAddress: req.body.shippingAddress,
-      paymentMethod: req.body.paymentMethod,
-      tracking: generateRandomTracking(),
+      shippingAddress,
+      paymentMethod,
+      status: "Processing"
+    });
+    await newOrder.save();
+
+    // 4. Record Transaction
+    // Ensure 'status' matches your Transaction model enum (e.g., 'Success', 'Completed')
+    await Transaction.create({
+      user: userId,
+      amount: total,
+      type: "Payment",
+      status: "Success" 
     });
 
-    await newOrder.save();
+    // 5. Cleanup Bag
     await Bag.deleteMany({ userId });
 
-    res.status(201).json({ message: "Order placed successfully", order: newOrder });
+    res.status(200).json({ message: "Order placed successfully", orderId: newOrder._id });
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Something went wrong" });
+    console.error("Critical Order Error:", error);
+    res.status(500).json({ message: "Internal Server Error", error: error.message });
   }
 });
 
-router.get("/user/:userid", async (req, res) => {
+// 2. GET USER ORDERS ROUTE
+// This must match your frontend api.get('/order/user/${user._id}')
+router.get("/user/:userId", async (req, res) => {
   try {
-    const orders = await Order.find({ userId: req.params.userid }).populate(
-      "items.productId"
-    );
+    const { userId } = req.params;
+    
+    // Populate productId to get full item details (image, name, etc.)
+    const orders = await Order.find({ userId })
+      .populate("items.productId") 
+      .sort({ createdAt: -1 }); // Newest orders first
+
     res.status(200).json(orders);
   } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Something went wrong" });
+    console.error("Fetch Orders Error:", error);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 });
 

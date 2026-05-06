@@ -11,6 +11,17 @@ router.get("/", async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 });
+// If the above is set to "/product", this route becomes "/product/category/:category"
+router.get("/category/:category", async (req, res) => {
+    // ... your logic
+    try {
+    const categories = await Product.find();
+    res.status(200).json(categories);
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({ message: "Something went wrong" });
+  }
+});
 
 router.get("/:id", async (req, res) => {
   const productid = req.params.id;
@@ -22,4 +33,5 @@ router.get("/:id", async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 });
+
 module.exports = router;

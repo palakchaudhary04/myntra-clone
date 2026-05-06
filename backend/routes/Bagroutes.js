@@ -12,7 +12,13 @@ router.post("/", async (req, res) => {
     return res.status(500).json({ message: "Something went wrong" });
   }
 });
-
+router.put("/move/:itemId", async (req, res) => {
+  const { status } = req.body; // 'cart' or 'saved'
+  try {
+    const item = await Bag.findByIdAndUpdate(req.params.itemId, { status }, { new: true });
+    res.json(item);
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 router.get("/:userid", async (req, res) => {
   try {
     const bag = await Bag.find({ userId: req.params.userid }).populate(

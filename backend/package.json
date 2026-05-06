@@ -12,10 +12,15 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^3.0.2",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.6",
     "dotenv": "^16.6.1",
+    "expo-file-system": "~55.0.17",
+    "expo-server-sdk": "^6.1.0",
+    "expo-sharing": "~55.0.18",
     "express": "^5.2.1",
+    "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.23.0"
   },
