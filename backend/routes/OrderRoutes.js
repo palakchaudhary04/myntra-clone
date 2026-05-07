@@ -2,7 +2,7 @@ const express = require("express");
 const router = express.Router();
 const Bag = require("../models/Bag");
 const Order = require("../models/Order");
-const Transaction = require("../models/Transaction");
+const Transaction = require("../models/transaction");
 
 // 1. CREATE ORDER ROUTE
 router.post("/create/:userId", async (req, res) => {
