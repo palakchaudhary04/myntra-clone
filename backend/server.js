@@ -3,19 +3,34 @@ const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 
-// 1. Load environment variables
-
-
+// Initialize Express
 const app = express();
 
-// 2. Middleware
+// 1. Middleware
 app.use(express.json());
-app.use(cors({ origin: "*",methods: ['GET', 'POST', 'PUT', 'DELETE'], credentials: true }));
-app.use((err, req, res, next) => {
-  console.error("CRASHED AT:", req.url, "ERROR:", err.stack);
-  res.status(500).send("Something broke!");
-});
-// 3. Import Routes
+
+// 2. Updated CORS for Security
+// Using "*" is okay for testing, but eventually, you should use your Vercel frontend URL
+app.use(cors({ 
+    origin: "*", 
+    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
+    credentials: true 
+}));
+
+// 3. Database Connection Logic (Optimized for Vercel)
+const connectDB = async () => {
+    if (mongoose.connection.readyState >= 1) return; // Use existing connection if available
+    
+    try {
+        await mongoose.connect(process.env.MONGO_URI);
+        console.log("✅ MongoDB connected");
+    } catch (err) {
+        console.error("❌ MongoDB connection error:", err.message);
+        // Don't exit process in Vercel environment; let it retry or fail gracefully
+    }
+};
+
+// 4. Import Routes
 const userrouter = require("./routes/Userroutes");
 const categoryrouter = require("./routes/Categoryroutes");
 const productrouter = require("./routes/Productroutes");
@@ -25,38 +40,41 @@ const BagRoutes = require("./routes/BagRoutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 const recommendationRoutes = require("./routes/RecommendationRoutes");
-// In orders.tsx
-
-// 4. Base Route  
-app.get("/", (req, res) => {
-  res.send("✅ Myntra backend is working");
-});
 
 // 5. API Routes
+// Note: We call connectDB() inside a middleware or before routes to ensure connection in serverless
+app.use(async (req, res, next) => {
+    await connectDB();
+    next();
+});
+
+app.get("/", (req, res) => {
+    res.send("✅ Myntra backend is working");
+});
+
 app.use("/user", userrouter);
 app.use("/category", categoryrouter);
 app.use("/product", productrouter);
 app.use("/wishlist", Wishlistroutes);
-app.use("/order", OrderRoutes);   // ✅ fixed casing
-app.use("/bag", BagRoutes);     // for frontend compatibility
+app.use("/order", OrderRoutes);
+app.use("/bag", BagRoutes);
 app.use("/transaction", transactionRoutes);
 app.use("/recommend", recommendationRoutes);
 app.use("/history", historyRoutes);
-// 6. Start Server ONLY after DB connects
-const startServer = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log("✅ MongoDB connected");
 
-    const PORT = process.env.PORT || 5000;
+// 6. Global Error Handler
+app.use((err, req, res, next) => {
+    console.error("CRASHED AT:", req.url, "ERROR:", err.stack);
+    res.status(500).json({ error: "Internal Server Error", message: err.message });
+});
+
+// 7. Start Server (For local development)
+const PORT = process.env.PORT || 5000;
+if (process.env.NODE_ENV !== 'production') {
     app.listen(PORT, () => {
-      console.log(`Server is running on port ${PORT}`);
+        console.log(`Server is running on port ${PORT}`);
     });
-  } catch (err) {
-    console.error("❌ MongoDB connection error:", err.message);
-    process.exit(1);
-  }
-};
+}
 
-// 7. Run server
-startServer();
+// Export for Vercel
+module.exports = app;
