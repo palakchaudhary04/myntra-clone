@@ -1,10 +1,10 @@
 import axios from 'axios';
 
-// Ensure this IP matches your CURRENT laptop IP from 'ipconfig'
-const BASE_URL = "process.env.https://myntra-clone-pcca-eldz8m06d-palakchaudhary04s-projects.vercel.app"; 
+// Ensure this IP matches your CURRENT laptop IP from 'ipc
+const API_URL = process.env.EXPO_PUBLIC_API_URL ||"https://myntra-clone-pcca-eldz8m06d-palakchaudhary04s-projects.vercel.app"; 
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_URL,
 });
 
 export default api;
