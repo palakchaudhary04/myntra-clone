@@ -31,15 +31,15 @@ const connectDB = async () => {
 };
 
 // 4. Import Routes
-const userrouter = require("./routes/Userroutes");
-const categoryrouter = require("./routes/Categoryroutes");
-const productrouter = require("./routes/Productroutes");
+const Userroutes = require("./routes/Userroutes");
+const Categoryroutes = require("./routes/Categoryroutes");
+const Productroutes = require("./routes/Productroutes");
 const Wishlistroutes = require("./routes/Wishlistroutes");
 const OrderRoutes = require("./routes/OrderRoutes");
-const BagRoutes = require("./routes/BagRoutes");
+const Bagroutes = require("./routes/Bagroutes");
 const transactionRoutes = require("./routes/transactionRoutes");
 const historyRoutes = require("./routes/historyRoutes");
-const recommendationRoutes = require("./routes/RecommendationRoutes");
+const RecommendationRoutes = require("./routes/RecommendationRoutes");
 
 // 5. API Routes
 // Note: We call connectDB() inside a middleware or before routes to ensure connection in serverless
@@ -52,14 +52,14 @@ app.get("/", (req, res) => {
     res.send("✅ Myntra backend is working");
 });
 
-app.use("/user", userrouter);
-app.use("/category", categoryrouter);
-app.use("/product", productrouter);
+app.use("/user", Userroutes);
+app.use("/category", Categoryroutes);
+app.use("/product", Productroutes);
 app.use("/wishlist", Wishlistroutes);
 app.use("/order", OrderRoutes);
-app.use("/bag", BagRoutes);
+app.use("/bag", Bagroutes);
 app.use("/transaction", transactionRoutes);
-app.use("/recommend", recommendationRoutes);
+app.use("/recommend", RecommendationRoutes);
 app.use("/history", historyRoutes);
 
 // 6. Global Error Handler
