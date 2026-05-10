@@ -1,6 +1,6 @@
 const express = require("express");
 const router = express.Router();
-const Transaction = require("../models/Transaction");
+const transaction = require("../models/transaction");
 const { Parser } = require("json2csv");
 
 // GET: Filtered Transactions for the UI
@@ -10,7 +10,7 @@ router.get("/user/:userId", async (req, res) => {
     let query = { userId: req.params.userId };
     if (type && type !== "All") query.type = type;
 
-    const transactions = await Transaction.find(query).sort({ date: -1 });
+    const transactions = await transaction.find(query).sort({ date: -1 });
     res.json(transactions);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
