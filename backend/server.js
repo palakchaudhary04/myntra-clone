@@ -1,7 +1,7 @@
 require('dotenv').config();
 const express = require("express");
 const mongoose = require("mongoose");
-const cors = require("cors");
+
 
 // Initialize Express
 const app = express();
@@ -11,11 +11,16 @@ app.use(express.json());
 
 // 2. Updated CORS for Security
 // Using "*" is okay for testing, but eventually, you should use your Vercel frontend URL
-app.use(cors({ 
-    origin: "*", 
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], 
-    credentials: true 
-}));
+const cors = require('cors');
+
+const corsOptions = {
+  origin: 'https://myntra-clone-five-murex.vercel.app', // Your actual frontend URL
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
+app.use(cors(corsOptions));
 
 // 3. Database Connection Logic (Optimized for Vercel)
 const connectDB = async () => {
