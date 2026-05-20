@@ -1,52 +1,33 @@
-import { Platform } from "react-native";
-import * as SecureStore from "expo-secure-store";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-// expo-secure-store only works on native (iOS/Android).
-// On web (localhost / Expo Web), we fall back to localStorage.
-
-const setItem = async (key: string, value: string) => {
-  if (Platform.OS === "web") {
-    localStorage.setItem(key, value);
-  } else {
-    await SecureStore.setItemAsync(key, value);
-  }
+const KEYS = {
+  id:    'user_id',
+  name:  'user_name',
+  email: 'user_email',
+  token: 'auth_token',
 };
 
-const getItem = async (key: string): Promise<string | null> => {
-  if (Platform.OS === "web") {
-    return localStorage.getItem(key);
-  } else {
-    return await SecureStore.getItemAsync(key);
-  }
-};
+export async function saveUserData(
+  id: string, name: string, email: string, token?: string
+) {
+  await AsyncStorage.multiSet([
+    [KEYS.id,    id],
+    [KEYS.name,  name],
+    [KEYS.email, email],
+    [KEYS.token, token || ''],
+  ]);
+}
 
-const deleteItem = async (key: string) => {
-  if (Platform.OS === "web") {
-    localStorage.removeItem(key);
-  } else {
-    await SecureStore.deleteItemAsync(key);
-  }
-};
+export async function getUserData() {
+  const pairs = await AsyncStorage.multiGet([KEYS.id, KEYS.name, KEYS.email, KEYS.token]);
+  return {
+    _id:   pairs[0][1] || '',
+    name:  pairs[1][1] || '',
+    email: pairs[2][1] || '',
+    token: pairs[3][1] || '',
+  };
+}
 
-export const saveUserData = async (
-  _id: string,
-  fullName: string,
-  email: string
-) => {
-  await setItem("userid", _id);
-  await setItem("userName", fullName);
-  await setItem("userEmail", email);
-};
-
-export const getUserData = async () => {
-  const _id = await getItem("userid");
-  const name = await getItem("userName");
-  const email = await getItem("userEmail");
-  return { _id, name, email };
-};
-
-export const clearUserData = async () => {
-  await deleteItem("userid");
-  await deleteItem("userName");
-  await deleteItem("userEmail");
-};
+export async function clearUserData() {
+  await AsyncStorage.multiRemove([KEYS.id, KEYS.name, KEYS.email, KEYS.token]);
+}

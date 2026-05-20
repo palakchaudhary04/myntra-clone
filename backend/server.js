@@ -1,85 +1,86 @@
 require('dotenv').config();
-const express = require("express");
-const mongoose = require("mongoose");
+const express  = require('express');
+const mongoose = require('mongoose');
+const cors     = require('cors');
+const helmet   = require('helmet');
+const rateLimit = require('express-rate-limit');
 
-
-// Initialize Express
 const app = express();
 
-// 1. Middleware
-app.use(express.json());
+// ── Security headers ───────────────────────────────────────────────────────
+app.use(helmet());
 
-// 2. Updated CORS for Security
-// Using "*" is okay for testing, but eventually, you should use your Vercel frontend URL
-const cors = require('cors');
-
+// ── CORS ───────────────────────────────────────────────────────────────────
 const corsOptions = {
-  origin: 'https://myntra-clone-five-murex.vercel.app', // Your actual frontend URL
+  origin: process.env.ALLOWED_ORIGINS
+    ? process.env.ALLOWED_ORIGINS.split(',')
+    : ['https://myntra-clone-five-murex.vercel.app', 'http://localhost:8081'],
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true,
-  optionsSuccessStatus: 204
+  optionsSuccessStatus: 204,
 };
-
 app.use(cors(corsOptions));
 
-// 3. Database Connection Logic (Optimized for Vercel)
+// ── IMPORTANT: Razorpay webhook needs raw body for HMAC verification ───────
+// Mount BEFORE express.json() so the raw buffer is preserved
+app.use('/order/webhook', express.raw({ type: 'application/json' }));
+
+// ── Body parsing (all other routes) ───────────────────────────────────────
+app.use(express.json({ limit: '10kb' }));
+
+// ── Rate limiting ──────────────────────────────────────────────────────────
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 150,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+app.use('/api/', limiter);
+
+// ── Database connection (optimised for Vercel serverless) ──────────────────
 const connectDB = async () => {
-    if (mongoose.connection.readyState >= 1) return; // Use existing connection if available
-    
-    try {
-        await mongoose.connect(process.env.MONGO_URI);
-        console.log("✅ MongoDB connected");
-    } catch (err) {
-        console.error("❌ MongoDB connection error:", err.message);
-        // Don't exit process in Vercel environment; let it retry or fail gracefully
-    }
+  if (mongoose.connection.readyState >= 1) return;
+  try {
+    await mongoose.connect(process.env.MONGO_URI);
+    console.log('✅ MongoDB connected');
+  } catch (err) {
+    console.error('❌ MongoDB connection error:', err.message);
+  }
 };
 
-// 4. Import Routes
-const Userroutes = require("./routes/Userroutes");
-const Categoryroutes = require("./routes/Categoryroutes");
-const Productroutes = require("./routes/Productroutes");
-const Wishlistroutes = require("./routes/Wishlistroutes");
-const OrderRoutes = require("./routes/OrderRoutes");
-const Bagroutes = require("./routes/Bagroutes");
-const transactionRoutes = require("./routes/transactionRoutes");
-const historyRoutes = require("./routes/historyRoutes");
-const RecommendationRoutes = require("./routes/RecommendationRoutes");
-
-// 5. API Routes
-// Note: We call connectDB() inside a middleware or before routes to ensure connection in serverless
+// Ensure DB is connected before every request
 app.use(async (req, res, next) => {
-    await connectDB();
-    next();
+  await connectDB();
+  next();
 });
 
-app.get("/", (req, res) => {
-    res.send("✅ Myntra backend is working");
+// ── Routes ─────────────────────────────────────────────────────────────────
+app.use('/user',        require('./routes/Userroutes'));
+app.use('/category',    require('./routes/Categoryroutes'));
+app.use('/product',     require('./routes/Productroutes'));   // includes /search
+app.use('/wishlist',    require('./routes/Wishlistroutes'));
+app.use('/order',       require('./routes/OrderRoutes'));     // includes /webhook
+app.use('/bag',         require('./routes/Bagroutes'));
+app.use('/transaction', require('./routes/transactionRoutes'));
+app.use('/recommend',   require('./routes/RecommendationRoutes'));
+app.use('/history',     require('./routes/historyRoutes'));
+
+app.get('/', (req, res) => res.send('✅ Myntra backend is working'));
+
+// ── Global error handler ───────────────────────────────────────────────────
+app.use((err, req, res, _next) => {
+  console.error('CRASHED AT:', req.url, 'ERROR:', err.stack);
+  res.status(err.status || 500).json({
+    error: 'Internal Server Error',
+    message: err.message,
+  });
 });
 
-app.use("/user", Userroutes);
-app.use("/category", Categoryroutes);
-app.use("/product", Productroutes);
-app.use("/wishlist", Wishlistroutes);
-app.use("/order", OrderRoutes);
-app.use("/bag", Bagroutes);
-app.use("/transaction", transactionRoutes);
-app.use("/recommend", RecommendationRoutes);
-app.use("/history", historyRoutes);
-
-// 6. Global Error Handler
-app.use((err, req, res, next) => {
-    console.error("CRASHED AT:", req.url, "ERROR:", err.stack);
-    res.status(500).json({ error: "Internal Server Error", message: err.message });
-});
-
-// 7. Start Server (For local development)
+// ── Local dev server ───────────────────────────────────────────────────────
 const PORT = process.env.PORT || 5000;
 if (process.env.NODE_ENV !== 'production') {
-    app.listen(PORT, () => {
-        console.log(`Server is running on port ${PORT}`);
-    });
+  app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
 }
 
-// Export for Vercel
 module.exports = app;
