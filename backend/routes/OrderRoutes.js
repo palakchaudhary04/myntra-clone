@@ -28,8 +28,11 @@ const Product     = require('../models/Product');
 const Transaction = require('../models/transaction');
 
 // ── Razorpay instance ──────────────────────────────────────────────────────
+const Razorpay = require('razorpay');
+
+// Ensure these variable names match your Vercel configurations exactly!
 const razorpay = new Razorpay({
-  key_id:     process.env.RAZORPAY_KEY_ID,
+  key_id: process.env.RAZORPAY_KEY_ID,
   key_secret: process.env.RAZORPAY_KEY_SECRET,
 });
 
