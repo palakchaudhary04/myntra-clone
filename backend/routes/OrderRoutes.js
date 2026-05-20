@@ -31,8 +31,8 @@ const Transaction = require('../models/transaction');
 
 // Ensure these variable names match your Vercel configurations exactly!
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET,
+  key_id: process.env.RAZORPAY_KEY_ID || "rzp_test_SrfkK5ZSyN1aH4",
+  key_secret: process.env.RAZORPAY_KEY_SECRET || "lRa8HaNj7zTvUueDnOWk7mvd"
 });
 
 // ── Utility: constant-time HMAC comparison (prevents timing attacks) ───────
