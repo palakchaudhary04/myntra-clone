@@ -28,7 +28,6 @@ const Product     = require('../models/Product');
 const Transaction = require('../models/transaction');
 
 // ── Razorpay instance ──────────────────────────────────────────────────────
-const Razorpay = require('razorpay');
 
 // Ensure these variable names match your Vercel configurations exactly!
 const razorpay = new Razorpay({
